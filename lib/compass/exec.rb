@@ -9,6 +9,9 @@ module Compass
 
     def report_error(e, options)
       $stderr.puts "#{e.class} on line #{get_line e} of #{get_file e}: #{e.message}"
+      if options[:mate]
+        system "mate -l #{get_line e} #{get_file e}"
+      end
       if options[:trace]
         e.backtrace[1..-1].each { |t| $stderr.puts "  #{t}" }
       else
@@ -26,7 +29,7 @@ module Compass
     module_function :report_error, :get_file, :get_line
 
     class Compass
-      
+
       attr_accessor :args, :options, :opts
 
       def initialize(args)
@@ -49,9 +52,9 @@ module Compass
         end
         return 0
       end
-      
+
       protected
-      
+
       def perform!
         if options[:command]
           do_command(options[:command])
@@ -59,10 +62,10 @@ module Compass
           puts self.opts
         end
       end
-      
+
       def parse!
         self.opts = OptionParser.new(&method(:set_opts))
-        self.opts.parse!(self.args)    
+        self.opts.parse!(self.args)
         if self.args.size > 0
           self.options[:project_name] = trim_trailing_separator(self.args.shift)
         end
@@ -81,7 +84,7 @@ Usage: compass [options] [project]
 
 Description:
   The compass command line tool will help you create and manage the stylesheets for your project.
-  
+
   To get started on a stand-alone project based on blueprint:
 
     compass -f blueprint my_compass_project
@@ -196,7 +199,7 @@ END
                                                    "  project configuration file.") do |library|
           ::Compass.configuration.require library
         end
-        
+
         opts.on('-q', '--quiet', :NONE, 'Quiet mode.') do
           self.options[:quiet] = true
         end
@@ -208,7 +211,7 @@ END
         opts.on('--trace', :NONE, 'Show a full stacktrace on error') do
           self.options[:trace] = true
         end
-        
+
         opts.on('--force', :NONE, 'Force. Allows some failing commands to succeed instead.') do
           self.options[:force] = true
         end
@@ -234,8 +237,12 @@ END
           self.options[:command] = :print_version
         end
 
+        opts.on_tail("-m", "--mate", "On error jump to line in TextMate") do
+          self.options[:mate] = true
+        end
+
       end
-      
+
       def do_command(command)
         command_class_name = command.to_s.split(/_/).map{|p| p.capitalize}.join('')
         command_class = eval("::Compass::Commands::#{command_class_name}")
